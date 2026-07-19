@@ -1,0 +1,7 @@
+# Ignore temporary build output folders
+bin/
+obj/
+
+# Ignore personal editor settings
+.vs/
+*.user

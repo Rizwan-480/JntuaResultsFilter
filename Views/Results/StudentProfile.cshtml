@@ -1,0 +1,612 @@
+@using JntuaResultsFilter.Models
+@{
+    var student = (Student)ViewBag.Student;
+    var consolidatedResults = (List<ConsolidatedResult>)ViewBag.ConsolidatedResults;
+    var allResults = (List<ConsolidatedResult>)(ViewBag.AllResults ?? new List<ConsolidatedResult>());
+    var unfetchedExams = (List<ResultSet>)ViewBag.UnfetchedExams;
+    var fetchedExams = (List<ResultSet>)ViewBag.FetchedExams;
+    ViewData["Title"] = $"{student.HallTicket} - Aggregated Scorecard";
+
+    // Read display status filter
+    var showStatus = (string)(ViewBag.ShowStatus ?? "Both");
+    
+    var displayedResults = consolidatedResults;
+    if (showStatus == "Passed")
+    {
+        displayedResults = consolidatedResults.Where(r => r.ResultStatus.Equals("Pass", StringComparison.OrdinalIgnoreCase)).ToList();
+    }
+    else if (showStatus == "Failed")
+    {
+        displayedResults = allResults.Where(r => !r.ResultStatus.Equals("Pass", StringComparison.OrdinalIgnoreCase)).ToList();
+    }
+    else if (showStatus == "Both")
+    {
+        displayedResults = allResults;
+    }
+
+    // Filter scraped sheets shown in summary list
+    var displayedFetchedExams = fetchedExams;
+    if (showStatus == "Passed")
+    {
+        displayedFetchedExams = fetchedExams.Where(f => 
+            allResults.Any(r => r.ResultSetId == f.Id && r.ResultStatus.Equals("Pass", StringComparison.OrdinalIgnoreCase))
+        ).ToList();
+    }
+    else if (showStatus == "Failed")
+    {
+        displayedFetchedExams = fetchedExams.Where(f => 
+            allResults.Any(r => r.ResultSetId == f.Id && !r.ResultStatus.Equals("Pass", StringComparison.OrdinalIgnoreCase))
+        ).ToList();
+    }
+}
+
+<!-- Fullscreen Loader Overlay -->
+<div id="loadingOverlay" class="position-fixed top-0 start-0 w-100 h-100 d-none" 
+     style="background: rgba(0, 47, 122, 0.85); z-index: 1060; backdrop-filter: blur(5px);">
+    <div class="d-flex flex-column justify-content-center align-items-center w-100 h-100 text-white">
+        <div class="spinner-border text-warning mb-3" style="width: 3.5rem; height: 3.5rem;" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <h4 class="fw-bold mb-1" id="overlay-title">Querying JNTUA Database</h4>
+        <p class="text-white-50" id="overlay-status">Fetching and parsing result sheets. Please wait...</p>
+    </div>
+</div>
+
+<div class="py-4">
+    <!-- Header Controls -->
+    <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a asp-action="Index" class="text-decoration-none">Home</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Student Scorecard</li>
+            </ol>
+        </nav>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            <i class="bi bi-arrow-left me-1"></i> Start New Search
+        </a>
+    </div>
+
+    <!-- Student Info Dashboard Banner -->
+    <div class="card shadow-sm border-0 rounded-4 mb-4 overflow-hidden">
+        <div class="p-4 text-white" style="background: linear-gradient(135deg, #002F7A 0%, #001A4E 100%);">
+            <div class="row align-items-center">
+                <div class="col-auto">
+                    <div class="bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 65px; height: 65px;">
+                        <i class="bi bi-person-badge-fill fs-2"></i>
+                    </div>
+                </div>
+                <div class="col">
+                    <h3 class="fw-bold mb-1">@(string.IsNullOrEmpty(student.StudentName) ? "Results Scraper Profile" : student.StudentName)</h3>
+                    <p class="mb-0 text-white-50">
+                        <span class="badge bg-warning text-dark me-2">@student.HallTicket</span>
+                        <span>@student.Branch</span>
+                    </p>
+                </div>
+                <div class="col-md-auto mt-3 mt-md-0 d-flex gap-2 no-print">
+                    <span class="badge bg-light text-primary py-2 px-3 fs-6 rounded-pill">@student.Course</span>
+                    <span class="badge bg-dark-subtle text-white py-2 px-3 fs-6 rounded-pill">Academic Span: @ViewBag.JoinYearFilter - @ViewBag.CompletionYearFilter</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metrics Indicators -->
+    <div class="row g-4 mb-4">
+        <!-- CGPA Card -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 rounded-4 p-4 text-center bg-white hover-shadow transition-all">
+                <p class="text-secondary fw-semibold mb-1 uppercase tracking-wider">Aggregate CGPA</p>
+                <h1 class="display-3 fw-bold text-primary my-1">@ViewBag.CGPA</h1>
+                <div class="progress rounded-pill mb-2" style="height: 6px;">
+                    <div class="progress-bar bg-primary" role="progressbar" style="width: @(ViewBag.CGPA * 10)%" aria-valuenow="@ViewBag.CGPA" aria-valuemin="0" aria-valuemax="10"></div>
+                </div>
+                <span class="text-muted small">Based on consolidated passed subjects</span>
+            </div>
+        </div>
+        <!-- Credits Card -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 rounded-4 p-4 text-center bg-white hover-shadow transition-all">
+                <p class="text-secondary fw-semibold mb-1 uppercase tracking-wider">Total Credits Earned</p>
+                <h1 class="display-3 fw-bold text-success my-1">@ViewBag.TotalCredits</h1>
+                <div class="d-flex align-items-center justify-content-center text-success small">
+                    <i class="bi bi-check-circle-fill me-1"></i> Earned credits bank
+                </div>
+            </div>
+        </div>
+        <!-- Backlogs Card -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 rounded-4 p-4 text-center bg-white hover-shadow transition-all">
+                <p class="text-secondary fw-semibold mb-1 uppercase tracking-wider">Pending Backlogs</p>
+                <h1 class="display-3 fw-bold @(ViewBag.BacklogsCount > 0 ? "text-danger" : "text-secondary") my-1">@ViewBag.BacklogsCount</h1>
+                <div class="d-flex align-items-center justify-content-center @(ViewBag.BacklogsCount > 0 ? "text-danger" : "text-muted") small">
+                    <i class="bi @(ViewBag.BacklogsCount > 0 ? "bi-exclamation-triangle-fill" : "bi-shield-check-fill") me-1"></i> 
+                    @(ViewBag.BacklogsCount > 0 ? "Requires supplementary clear" : "Clean academic record")
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AUTO SCANNER WIZARD (If Unfetched exams exist) -->
+    @if (unfetchedExams.Count > 0)
+    {
+        <div class="card shadow-sm border-0 rounded-4 mb-4 overflow-hidden border-start border-danger border-4 no-print">
+            <div class="card-body p-4">
+                <div class="row align-items-center">
+                    <div class="col-md">
+                        <h5 class="fw-bold text-danger mb-1"><i class="bi bi-robot me-2"></i> Automated Scorecard Crawler</h5>
+                        <p class="text-secondary mb-0 small">
+                            We found <strong>@unfetchedExams.Count</strong> result sheets matching your target configuration (Year: @ViewBag.TargetYearFilter, Type: @ViewBag.ExamTypeFilter). 
+                            You can automatically scan and query all of them one-by-one by solving a captcha for each link.
+                        </p>
+                    </div>
+                    <div class="col-md-auto mt-3 mt-md-0">
+                        <button class="btn btn-danger btn-lg rounded-pill px-4" onclick="startBatchCrawling()">
+                            <i class="bi bi-play-circle-fill me-1"></i> Start Auto-Scraping Queue
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Crawler Progress list (collapsible / status tracker) -->
+                <div id="crawlerStatusSection" class="mt-4 d-none">
+                    <h6 class="fw-bold mb-2">Crawler Queue Status:</h6>
+                    <div class="border rounded-3 bg-light p-3" style="max-height: 200px; overflow-y: auto;">
+                        <ul class="list-unstyled mb-0 small" id="queue-status-list">
+                            @foreach (var exam in unfetchedExams)
+                            {
+                                <li class="mb-2 d-flex justify-content-between align-items-center border-bottom pb-1" id="status-row-@exam.Id">
+                                    <span class="text-dark"><i class="bi bi-file-earmark-text text-secondary me-1"></i> @exam.Title</span>
+                                    <span class="badge bg-secondary rounded-pill" id="status-badge-@exam.Id">Waiting in Queue</span>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Main Results Details Card -->
+    <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+        <div class="card-header bg-light border-0 p-0 no-print">
+            <ul class="nav nav-tabs nav-justified" id="resultTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active py-3 fw-semibold" id="consolidated-tab" data-bs-toggle="tab" data-bs-target="#consolidated-pane" type="button" role="tab">
+                        <i class="bi bi-award-fill text-warning me-1"></i> 
+                        @(showStatus == "Passed" ? "Passed Results" : showStatus == "Failed" ? "Failed Results" : "Consolidated Scorecard")
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link py-3 fw-semibold" id="sem-tab" data-bs-toggle="tab" data-bs-target="#sem-pane" type="button" role="tab">
+                        <i class="bi bi-calendar-event me-1"></i> Semester Wise
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link py-3 fw-semibold" id="backlog-tab" data-bs-toggle="tab" data-bs-target="#backlog-pane" type="button" role="tab">
+                        <i class="bi bi-x-circle me-1"></i> Backlogs
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link py-3 fw-semibold" id="source-tab" data-bs-toggle="tab" data-bs-target="#source-pane" type="button" role="tab">
+                        <i class="bi bi-link-45deg me-1"></i> Scraped Link Sheets
+                    </button>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="card-body p-4">
+            <div class="tab-content" id="resultTabsContent">
+                
+                <!-- 1. CONSOLIDATED PASSED SCORECARD -->
+                <div class="tab-pane fade show active" id="consolidated-pane" role="tabpanel" tabindex="0">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold m-0 text-dark">
+                            <i class="bi bi-award-fill text-warning me-1"></i> 
+                            @(showStatus == "Passed" ? "Passed Results Copy" : showStatus == "Failed" ? "Failed Results Copy" : "Consolidated Results")
+                        </h5>
+                        <button class="btn btn-outline-dark btn-sm rounded-pill no-print" onclick="window.print()">
+                            <i class="bi bi-printer me-1"></i> Print Memo
+                        </button>
+                    </div>
+
+                    @if (displayedResults.Count == 0)
+                    {
+                        <div class="text-center py-5">
+                            <i class="bi bi-cloud-slash display-2 text-muted"></i>
+                            <h5 class="mt-3 text-secondary">No matching subjects recorded.</h5>
+                            <p class="text-muted small">Please verify your selection or run "Auto-Scraping Queue" to search results.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle border">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Subject Code</th>
+                                        <th>Subject Name</th>
+                                        <th class="text-center">Year-Sem</th>
+                                        <th class="text-center">Grade</th>
+                                        <th class="text-center">Credits</th>
+                                        <th class="text-center">Status</th>
+                                        <th>Source Result Sheet</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var res in displayedResults)
+                                    {
+                                        <tr>
+                                            <td class="fw-bold text-secondary">@res.SubjectCode</td>
+                                            <td class="fw-medium text-dark">@res.SubjectName</td>
+                                            <td class="text-center fw-semibold">@res.Year-@res.Semester</td>
+                                            <td class="text-center"><span class="badge bg-secondary fs-6 px-3">@res.Grade</span></td>
+                                            <td class="text-center fw-semibold">@(res.Credits?.ToString("0.0") ?? "-")</td>
+                                            <td class="text-center">
+                                                @if (res.ResultStatus.Equals("Pass", StringComparison.OrdinalIgnoreCase))
+                                                {
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">Pass</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1">Fail</span>
+                                                }
+                                            </td>
+                                            <td class="small text-muted text-truncate" style="max-width: 250px;" title="@res.ResultSetTitle">
+                                                @res.ResultSetTitle
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+
+                <!-- 2. SEMESTER WISE DETAILS -->
+                <div class="tab-pane fade" id="sem-pane" role="tabpanel" tabindex="0">
+                    <h5 class="fw-bold mb-4 text-dark"><i class="bi bi-journals me-2 text-primary"></i> Semester breakups</h5>
+                    @if (displayedResults.Count == 0)
+                    {
+                        <div class="text-center py-5"><h5 class="text-muted">No matching data to display</h5></div>
+                    }
+                    else
+                    {
+                        @for (int y = 1; y <= 4; y++)
+                        {
+                            @for (int s = 1; s <= 2; s++)
+                            {
+                                var semRes = displayedResults.Where(r => r.Year == y && r.Semester == s).ToList();
+                                if (semRes.Count > 0)
+                                {
+                                    <div class="mb-4 border rounded-3 p-3 bg-light-subtle">
+                                        <h6 class="fw-bold text-primary mb-3">@y Year - @(s == 1 ? "I" : "II") Semester</h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-hover align-middle border bg-white m-0">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>Code</th>
+                                                        <th>Subject Name</th>
+                                                        <th class="text-center">Grade</th>
+                                                        <th class="text-center">Credits</th>
+                                                        <th class="text-center">Status</th>
+                                                        <th>Exam Type</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var res in semRes)
+                                                    {
+                                                        <tr>
+                                                            <td class="fw-bold">@res.SubjectCode</td>
+                                                            <td>@res.SubjectName</td>
+                                                            <td class="text-center"><span class="badge bg-light text-dark">@res.Grade</span></td>
+                                                            <td class="text-center">@(res.Credits?.ToString("0.0") ?? "-")</td>
+                                                            <td class="text-center">
+                                                                @if (res.ResultStatus.Equals("Pass", StringComparison.OrdinalIgnoreCase))
+                                                                {
+                                                                    <span class="badge bg-success-subtle text-success px-2 py-1 rounded">Pass</span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="badge bg-danger-subtle text-danger px-2 py-1 rounded">Fail</span>
+                                                                }
+                                                            </td>
+                                                            <td><span class="badge @(res.ExamType == "Regular" ? "bg-info-subtle text-info" : "bg-warning-subtle text-warning")">@res.ExamType</span></td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        }
+                    }
+                </div>
+
+                <!-- 3. ACTIVE BACKLOGS -->
+                <div class="tab-pane fade" id="backlog-pane" role="tabpanel" tabindex="0">
+                    <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-exclamation-octagon-fill text-danger me-2"></i> Pending Backlogs</h5>
+                    @{
+                        var backlogs = consolidatedResults.Where(r => !r.ResultStatus.Equals("Pass", StringComparison.OrdinalIgnoreCase)).ToList();
+                    }
+                    @if (backlogs.Count == 0)
+                    {
+                        <div class="text-center py-5 text-success">
+                            <i class="bi bi-shield-check display-2"></i>
+                            <h5 class="mt-3 fw-bold">All Cleared! No Active Backlogs.</h5>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle border">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Code</th>
+                                        <th>Subject Name</th>
+                                        <th class="text-center">Year/Sem</th>
+                                        <th class="text-center">Grade</th>
+                                        <th class="text-center">Status</th>
+                                        <th>Last Attempt Sheet</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var bg in backlogs)
+                                    {
+                                        <tr class="table-danger-subtle">
+                                            <td class="fw-bold">@bg.SubjectCode</td>
+                                            <td>@bg.SubjectName</td>
+                                            <td class="text-center">@bg.Year-@bg.Semester</td>
+                                            <td class="text-center"><span class="badge bg-danger fs-6">@bg.Grade</span></td>
+                                            <td class="text-center"><span class="badge bg-danger-subtle text-danger px-3 py-1 rounded-pill">@bg.ResultStatus</span></td>
+                                            <td>@bg.ResultSetTitle</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+
+                <!-- 4. SCRAPED LINk SHEETS -->
+                <div class="tab-pane fade" id="source-pane" role="tabpanel" tabindex="0">
+                    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-link-45deg text-primary me-2"></i> Scraped Link Sheets Summary</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <h6 class="fw-bold text-success border-bottom pb-2">Successfully Downloaded & Saved (@displayedFetchedExams.Count)</h6>
+                            @if (displayedFetchedExams.Count == 0)
+                            {
+                                <p class="text-muted small">No sheets fetched yet.</p>
+                            }
+                            else
+                            {
+                                <div class="list-group">
+                                    @foreach (var f in displayedFetchedExams)
+                                    {
+                                        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
+                                            <div>
+                                                <h6 class="fw-bold mb-0 text-dark small">@f.Title</h6>
+                                                <small class="text-muted d-block mb-2">Published: @(f.PublishDate?.ToString("dd-MMM-yyyy") ?? "N/A")</small>
+                                                <a href="/Results/OriginalMemo?hallTicket=@student.HallTicket&resultSetId=@f.Id" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill py-1 px-3" style="font-size: 11px;">
+                                                    <i class="bi bi-printer me-1"></i> Original Memo
+                                                </a>
+                                            </div>
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">Cached</span>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+
+                        <div class="col-md-6">
+                            <h6 class="fw-bold text-secondary border-bottom pb-2">Unscraped / Pending List (@unfetchedExams.Count)</h6>
+                            @if (unfetchedExams.Count == 0)
+                            {
+                                <p class="text-muted small">No pending sheets matching filters.</p>
+                            }
+                            else
+                            {
+                                <div class="list-group">
+                                    @foreach (var uf in unfetchedExams)
+                                    {
+                                        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
+                                            <div>
+                                                <h6 class="fw-bold mb-0 text-dark small">@uf.Title</h6>
+                                                <small class="text-muted">Published: @(uf.PublishDate?.ToString("dd-MMM-yyyy") ?? "N/A")</small>
+                                            </div>
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1">Pending</span>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- hCaptcha Verification Modal -->
+<div class="modal fade" id="captchaModal" data-bs-backdrop="static" tabindex="-1" aria-labelledby="captchaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header text-white" style="background: linear-gradient(135deg, #002F7A 0%, #001A4E 100%);">
+                <h5 class="modal-title fw-bold" id="captchaModalLabel"><i class="bi bi-shield-lock me-2 text-warning"></i> Queue Security Verification</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" id="modal-close-btn"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+                <div class="alert alert-warning border-0 rounded-3 mb-3 py-2 small d-none" id="crawler-progress-banner">
+                    Scraping Progress: <strong id="progress-text">1 of 5</strong> sheets completed.
+                </div>
+                <p class="text-secondary small mb-2">Solve this captcha to search results for:</p>
+                <h6 class="fw-bold text-primary mb-4" id="examTitleText"></h6>
+                
+                <div class="d-flex justify-content-center mb-3">
+                    <div id="hcaptcha-widget"></div>
+                </div>
+                
+                <div id="captcha-error" class="alert alert-danger border-0 rounded-3 mb-0 py-2 small d-none"></div>
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal" id="modal-cancel-btn">Cancel Scan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+    <script>
+        // JavaScript Queue representing the Unfetched Exam Links
+        const crawlerQueue = [
+            @foreach (var exam in unfetchedExams)
+            {
+                @:{ id: "@exam.Id", title: "@exam.Title" },
+            }
+        ];
+
+        let queueIndex = 0;
+        let isBatchCrawlingActive = false;
+        let hcaptchaWidgetId = null;
+
+        function startBatchCrawling() {
+            if (crawlerQueue.length === 0) return;
+            isBatchCrawlingActive = true;
+            queueIndex = 0;
+            
+            // Show status tracker list
+            document.getElementById('crawlerStatusSection').classList.remove('d-none');
+            
+            // Start queue processing
+            processNextQueueItem();
+        }
+
+        function processNextQueueItem() {
+            if (queueIndex >= crawlerQueue.length) {
+                // Batch complete!
+                isBatchCrawlingActive = false;
+                showCompletionMessage();
+                return;
+            }
+
+            const item = crawlerQueue[queueIndex];
+            
+            // Update queue statuses in UI list
+            updateRowStatus(item.Id, "Processing...", "bg-primary");
+            
+            // Update modal texts
+            document.getElementById('examTitleText').innerText = item.title;
+            const progressBanner = document.getElementById('crawler-progress-banner');
+            progressBanner.classList.remove('d-none');
+            document.getElementById('progress-text').innerText = `${queueIndex + 1} of ${crawlerQueue.length}`;
+
+            // Open Modal
+            const captchaModal = new bootstrap.Modal(document.getElementById('captchaModal'));
+            captchaModal.show();
+
+            // Render/Reset hCaptcha
+            if (hcaptchaWidgetId === null) {
+                hcaptchaWidgetId = hcaptcha.render('hcaptcha-widget', {
+                    sitekey: '28d1bda9-6315-4e6c-a2f5-4afe93bbccec',
+                    callback: 'onQueueCaptchaSolved'
+                });
+            } else {
+                hcaptcha.reset(hcaptchaWidgetId);
+            }
+        }
+
+        function onQueueCaptchaSolved(token) {
+            // Hide modal and show loading spinner overlay
+            const modalEl = document.getElementById('captchaModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+
+            const overlay = document.getElementById('loadingOverlay');
+            document.getElementById('overlay-title').innerText = "Querying JNTUA Database";
+            const currentItem = crawlerQueue[queueIndex];
+            document.getElementById('overlay-status').innerText = `Searching roll number in: ${currentItem.title}`;
+            overlay.classList.remove('d-none');
+
+            // Post request to controller
+            $.post('/Results/FetchResult', {
+                resultTitleId: currentItem.id,
+                hallTicketNumber: '@student.HallTicket',
+                verificationToken: token,
+                showStatus: '@showStatus'
+            }, function(response) {
+                overlay.classList.add('d-none');
+                
+                if (response.success) {
+                    if (response.downloaded) {
+                        updateRowStatus(currentItem.id, `Downloaded (${response.passedCount}/${response.totalCount} subjects)`, "bg-success");
+                    } else {
+                        updateRowStatus(currentItem.id, `Skipped (${response.message || 'Filtered out'})`, "bg-warning text-dark");
+                    }
+                    
+                    // Increment queue pointer and process next item
+                    queueIndex++;
+                    setTimeout(processNextQueueItem, 800);
+                } else {
+                    // API error (e.g. invalid captcha, or network failure)
+                    const isCaptchaError = response.message && (
+                        response.message.toLowerCase().includes("captcha") || 
+                        response.message.toLowerCase().includes("verification") || 
+                        response.message.toLowerCase().includes("token")
+                    );
+
+                    if (isCaptchaError) {
+                        updateRowStatus(currentItem.id, `Failed: ${response.message}`, "bg-danger");
+                        // Prompt user to retry current item (Captcha expired or failed)
+                        alert(`Fetch error: ${response.message}. Click OK to solve Captcha again.`);
+                        processNextQueueItem(); 
+                    } else {
+                        // Silently skip non-captcha errors (e.g. records not found on JNTUA, bad request structure)
+                        updateRowStatus(currentItem.id, `Skipped (${response.message || 'No records found'})`, "bg-warning text-dark");
+                        queueIndex++;
+                        setTimeout(processNextQueueItem, 800);
+                    }
+                }
+            }).fail(function() {
+                overlay.classList.add('d-none');
+                updateRowStatus(currentItem.id, "Connection Error", "bg-danger");
+                alert("Aggregator server connection lost. Press OK to retry.");
+                processNextQueueItem();
+            });
+        }
+
+        function updateRowStatus(examId, statusText, badgeClass) {
+            const badge = document.getElementById(`status-badge-${examId}`);
+            if (badge) {
+                badge.className = `badge rounded-pill ${badgeClass}`;
+                badge.innerText = statusText;
+            }
+            
+            // Scroll to the active row
+            const row = document.getElementById(`status-row-${examId}`);
+            if (row) {
+                row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        function showCompletionMessage() {
+            // Show fullscreen loading overlay and reload page to compile scorecard
+            const overlay = document.getElementById('loadingOverlay');
+            document.getElementById('overlay-title').innerText = "Aggregation Complete";
+            document.getElementById('overlay-status').innerText = "Recompiling your consolidated scorecard memo. Reloading...";
+            overlay.classList.remove('d-none');
+            
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        }
+
+        // Single Manual Link Trigger Function (fallback / individual fetch)
+        function openCaptchaModal(examId, examTitle) {
+            // Setup single item in queue and trigger
+            crawlerQueue.length = 0;
+            crawlerQueue.push({ id: examId, title: examTitle });
+            startBatchCrawling();
+        }
+    </script>
+}

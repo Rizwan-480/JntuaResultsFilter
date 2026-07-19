@@ -1,0 +1,417 @@
+@model List<JntuaResultsFilter.Models.StudentResult>
+@using JntuaResultsFilter.Models
+@{
+    Layout = null;
+    var student = (Student)ViewBag.Student;
+    var resultSet = (ResultSet)ViewBag.ResultSet;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JNTUA Results - @student.HallTicket</title>
+    <!-- Bootstrap CSS & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #333;
+            padding: 20px;
+        }
+        
+        .results-page {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border: 1px solid #cceeff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.05);
+        }
+
+        /* JNTUA Official Header Banner */
+        .university-header {
+            background-color: #D9F3FF;
+            padding: 15px 20px;
+            border-bottom: 2px solid #aaddff;
+        }
+        .logo-container {
+            width: 85px;
+            height: 85px;
+        }
+        .logo-img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .header-text {
+            padding-left: 15px;
+        }
+        .univ-title-en {
+            font-size: 24px;
+            font-weight: normal;
+            color: #0277bd;
+            margin: 0;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .univ-title-te {
+            font-size: 16px;
+            font-weight: bold;
+            color: #d81b60;
+            margin: 2px 0;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        .univ-location {
+            font-size: 11px;
+            color: #0288d1;
+            margin: 0;
+        }
+        .exam-center-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #01579b;
+            margin-top: 8px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        /* Title Card */
+        .title-card {
+            background-color: #D9F3FF;
+            border: 1px solid #80d8ff;
+            color: #01579b;
+            font-weight: bold;
+            font-size: 14px;
+            padding: 10px 15px;
+            margin: 20px;
+            text-align: center;
+        }
+
+        /* Student Metadata Row */
+        .student-metadata {
+            margin: 15px 20px;
+            font-size: 14px;
+        }
+        .meta-label {
+            font-weight: bold;
+            color: #000;
+        }
+        .meta-value {
+            font-weight: bold;
+            color: #2e7d32; /* Green text matching original site */
+        }
+
+        /* Official Marks Table formatting */
+        .marks-table {
+            margin: 15px 20px;
+        }
+        .marks-table table {
+            border: 1px solid #b3e5fc !important;
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .marks-table th {
+            background-color: #b3e5fc !important;
+            color: #000 !important;
+            font-weight: bold;
+            border: 1px solid #81d4fa !important;
+            font-size: 13px;
+            text-align: center;
+            padding: 10px 6px;
+        }
+        .marks-table td {
+            border: 1px solid #e0e0e0 !important;
+            font-size: 13px;
+            padding: 8px 12px;
+            color: #000;
+        }
+        .marks-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .marks-table tr:hover {
+            background-color: #f1f8ff;
+        }
+
+        /* Disclaimer and Warning Box */
+        .disclaimer-section {
+            margin: 15px 20px;
+            font-size: 12px;
+            color: #000;
+            line-height: 1.5;
+        }
+        .warning-box {
+            border: 1px solid #ffcdd2;
+            background-color: #ffebee;
+            color: #c62828;
+            font-weight: bold;
+            text-align: center;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 25px 20px;
+            font-size: 13px;
+        }
+
+        /* Light Blue Footer Band */
+        .footer-band {
+            background-color: #D9F3FF;
+            border-top: 1px solid #b3e5fc;
+            padding: 15px;
+            text-align: center;
+            font-size: 11px;
+            color: #000;
+        }
+        .footer-links a {
+            color: #0277bd;
+            text-decoration: none;
+            margin: 0 5px;
+        }
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+
+        /* Print Media queries to enforce single-page tabloid/A4 dimensions */
+        @@media print {
+            @@page {
+                size: portrait;
+                margin: 0;
+            }
+            body {
+                background-color: #ffffff;
+                padding: 0;
+                margin: 0;
+            }
+            .results-page {
+                border: none;
+                box-shadow: none;
+                max-width: 100%;
+                width: 100%;
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                page-break-inside: avoid;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .university-header {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                background-color: #D9F3FF !important;
+            }
+            .title-card {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                background-color: #D9F3FF !important;
+            }
+            .marks-table th {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                background-color: #b3e5fc !important;
+            }
+            .warning-box {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                background-color: #ffebee !important;
+                border: 1px solid #ffcdd2 !important;
+            }
+            .footer-band {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                background-color: #D9F3FF !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Web Controls Menu -->
+    <div class="no-print text-center mb-4">
+        <button onclick="window.print()" class="btn btn-primary rounded-pill px-4 py-2 shadow-sm">
+            <i class="bi bi-printer me-1"></i> Print / Save as PDF
+        </button>
+        <button onclick="downloadBackup()" class="btn btn-success rounded-pill px-4 py-2 ms-2 shadow-sm">
+            <i class="bi bi-file-earmark-arrow-down me-1"></i> Download HTML Backup
+        </button>
+        <button onclick="window.close()" class="btn btn-outline-secondary rounded-pill px-4 py-2 ms-2">
+            Close Tab
+        </button>
+    </div>
+
+    <!-- Official Style Results Container -->
+    <div class="results-page">
+        <div>
+            <!-- Header Block -->
+            <div class="university-header d-flex align-items-center">
+                <div class="logo-container">
+                    <img src="/images/logo.png" class="logo-img" alt="JNTUA Emblem" 
+                         onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/en/thumb/f/f6/Jawaharlal_Nehru_Technological_University%2C_Anantapur_logo.png/120px-Jawaharlal_Nehru_Technological_University%2C_Anantapur_logo.png'" />
+                </div>
+                <div class="header-text flex-grow-1 text-center">
+                    <h1 class="univ-title-en">Jawaharlal Nehru Technological University Anantapur.</h1>
+                    <div class="univ-title-te">జవహర్లాల్ నెహ్రూ సాంకేతిక విశ్వవిద్యాలయం అనంతపురం</div>
+                    <div class="univ-location">Ananthapuramu, Andhra Pradesh, India Pin : 515002</div>
+                    <div class="exam-center-title">JNTUA Examination Information Center</div>
+                </div>
+            </div>
+
+            <!-- Title Bar -->
+            <div class="title-card">
+                Title : @resultSet.Title
+            </div>
+
+            <!-- Student info details -->
+            <div class="student-metadata">
+                <div class="row">
+                    <div class="col-md-6 mb-2 text-center text-md-start">
+                        <span class="meta-label">HallTicket Number :</span>
+                        <span class="meta-value ms-2">@student.HallTicket</span>
+                    </div>
+                    <div class="col-md-6 mb-2 text-center text-md-end">
+                        <span class="meta-label">Student Name :</span>
+                        <span class="meta-value ms-2">@student.StudentName</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grades Table -->
+            <div class="marks-table">
+                <table class="table table-bordered align-middle text-center m-0">
+                    <thead>
+                        <tr>
+                            <th>Subject Code</th>
+                            <th class="text-start">Subject Name</th>
+                            <th style="width: 100px;">Internal Marks</th>
+                            <th style="width: 100px;">External Marks</th>
+                            <th style="width: 100px;">Total Marks</th>
+                            <th style="width: 100px;">Result Status</th>
+                            <th style="width: 80px;">Credits</th>
+                            <th style="width: 80px;">Grade</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@item.SubjectCode</td>
+                                <td class="text-start">@item.SubjectName</td>
+                                <td>@(item.InternalMarks.HasValue ? item.InternalMarks.Value.ToString() : "-")</td>
+                                <td>@(item.ExternalMarks.HasValue ? item.ExternalMarks.Value.ToString() : "-")</td>
+                                <td class="fw-semibold">@(item.TotalMarks.HasValue ? item.TotalMarks.Value.ToString() : "-")</td>
+                                <td class="fw-bold">
+                                    @if (item.ResultStatus.Equals("Pass", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <span class="text-success">P</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-danger">F</span>
+                                    }
+                                </td>
+                                <td>@(item.Credits.HasValue ? item.Credits.Value.ToString("0.0") : "-")</td>
+                                <td class="fw-bold">@item.Grade</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Disclaimer -->
+            <div class="disclaimer-section">
+                <strong>Result Disclaimer :</strong> Data and information are provided for informational purposes only, and the final results will be given by the respective Controller of Examinations.
+            </div>
+
+            <!-- Red discrepancy box -->
+            <div class="warning-box">
+                Any discrepancy in the result noted above must be brought to the notice of the Controller of Examinations, within two weeks from the above date.
+            </div>
+        </div>
+
+        <!-- Footer Banner -->
+        <div class="footer-band">
+            <div>All &copy; 2018 Jawaharlal Nehru Technological University, Anantapur. All Rights Reserved.</div>
+            <div class="footer-links mt-1">
+                <a href="#">Disclaimer</a>|
+                <a href="#">Copyright</a>|
+                <a href="#">Terms</a>|
+                <a href="#">Web Master</a>|
+                <a href="#">Feedback</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Trigger print immediately on page load
+        window.onload = function () {
+            setTimeout(function () {
+                window.print();
+            }, 800);
+        };
+
+        function downloadBackup() {
+            // Clone the results section
+            const container = document.querySelector('.results-page').cloneNode(true);
+            
+            // Build a complete standalone HTML document with embedded styles
+            const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>JNTUA Results - ${'@student.HallTicket'}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <style>
+        body { background-color: #f8f9fa; font-family: Arial, sans-serif; color: #333; padding: 20px; }
+        .results-page { max-width: 1000px; margin: 0 auto; background-color: #ffffff; border: 1px solid #cceeff; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
+        .university-header { background-color: #D9F3FF; padding: 15px 20px; border-bottom: 2px solid #aaddff; display: flex; align-items: center; }
+        .logo-container { width: 85px; height: 85px; }
+        .logo-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .header-text { padding-left: 15px; flex-grow: 1; text-align: center; }
+        .univ-title-en { font-size: 24px; font-weight: normal; color: #0277bd; margin: 0; }
+        .univ-title-te { font-size: 16px; font-weight: bold; color: #d81b60; margin: 2px 0; }
+        .univ-location { font-size: 11px; color: #0288d1; margin: 0; }
+        .exam-center-title { font-size: 16px; font-weight: bold; color: #01579b; margin-top: 8px; text-transform: uppercase; }
+        .title-card { background-color: #D9F3FF; border: 1px solid #80d8ff; color: #01579b; font-weight: bold; font-size: 14px; padding: 10px 15px; margin: 20px; text-align: center; }
+        .student-metadata { margin: 15px 20px; font-size: 14px; }
+        .meta-label { font-weight: bold; color: #000; }
+        .meta-value { font-weight: bold; color: #2e7d32; }
+        .marks-table { margin: 15px 20px; }
+        .marks-table table { border: 1px solid #b3e5fc !important; border-collapse: collapse; width: 100%; }
+        .marks-table th { background-color: #b3e5fc !important; color: #000 !important; font-weight: bold; border: 1px solid #81d4fa !important; font-size: 13px; text-align: center; padding: 10px 6px; }
+        .marks-table td { border: 1px solid #e0e0e0 !important; font-size: 13px; padding: 8px 12px; color: #000; text-align: center; }
+        .marks-table tr:nth-child(even) { background-color: #f9f9f9; }
+        .disclaimer-section { margin: 15px 20px; font-size: 12px; color: #000; line-height: 1.5; }
+        .warning-box { border: 1px solid #ffcdd2; background-color: #ffebee; color: #c62828; font-weight: bold; text-align: center; padding: 15px; border-radius: 4px; margin: 25px 20px; font-size: 13px; }
+        .footer-band { background-color: #D9F3FF; border-top: 1px solid #b3e5fc; padding: 15px; text-align: center; font-size: 11px; color: #000; }
+        .footer-links a { color: #0277bd; text-decoration: none; margin: 0 5px; }
+        
+        @@media print {
+            @@page { size: portrait; margin: 0; }
+            body { padding: 0; margin: 0; }
+            .results-page { border: none; box-shadow: none; max-width: 100%; width: 100%; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; page-break-inside: avoid; }
+            .university-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: #D9F3FF !important; }
+            .title-card { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: #D9F3FF !important; }
+            .marks-table th { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: #b3e5fc !important; }
+            .warning-box { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: #ffebee !important; border: 1px solid #ffcdd2 !important; }
+            .footer-band { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: #D9F3FF !important; }
+        }
+    </style>
+</head>
+<body>
+    ${container.outerHTML}
+    <script>
+        window.onload = function() { window.print(); };
+    <\/script>
+</body>
+</html>`;
+
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = "JNTUA_Results_${student.HallTicket}_${resultSet.Id}.html";
+            link.click();
+        }
+    </script>
+</body>
+</html>

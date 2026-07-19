@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - JntuaResultsFilter</title>
+    <script type="importmap"></script>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <!-- Google Fonts & Bootstrap Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/JntuaResultsFilter.styles.css" asp-append-version="true" />
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #F4F7FC 0%, #E9EEF6 100%);
+            min-height: 100vh;
+        }
+        .transition-all {
+            transition: all 0.25s ease-in-out;
+        }
+        .hover-shadow:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 1rem 3rem rgba(0,0,0,.08) !important;
+        }
+    </style>
+</head>
+<body>
+    <header class="no-print">
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark border-bottom mb-3" style="background-color: #002F7A; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <div class="container">
+                <a class="navbar-brand fw-bold d-flex align-items-center" asp-area="" asp-controller="Results" asp-action="Index">
+                    <i class="bi bi-mortarboard-fill me-2 text-warning fs-4"></i> JNTUA Aggregator
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-end">
+                    <ul class="navbar-nav">
+                        <li class="nav-item">
+                            <a class="nav-link text-white fw-medium" asp-area="" asp-controller="Results" asp-action="Index">
+                                <i class="bi bi-search me-1"></i> Search Scorecard
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted bg-white py-3 no-print">
+        <div class="container text-center">
+            &copy; 2026 - JNTUA Results Aggregator - Academic Filtering Utility
+        </div>
+    </footer>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

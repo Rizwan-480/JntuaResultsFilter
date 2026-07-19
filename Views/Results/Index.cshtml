@@ -1,0 +1,379 @@
+@{
+    ViewData["Title"] = "JNTUA Results Aggregator";
+}
+
+<div class="row justify-content-center align-items-center min-vh-75 py-4">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-lg border-0 rounded-4 overflow-hidden" style="background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(10px);">
+            <!-- Progress Bar Header -->
+            <div class="p-4 bg-light border-bottom">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-bold text-primary small uppercase tracking-wide" id="step-indicator">Step 1 of 5: Select Program</span>
+                    <span class="badge bg-primary-subtle text-primary rounded-pill" id="step-badge">20% Complete</span>
+                </div>
+                <div class="progress rounded-pill" style="height: 6px;">
+                    <div class="progress-bar bg-primary transition-all" id="wizard-progress" role="progressbar" style="width: 20%;" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+            </div>
+
+            <form asp-action="Search" method="post" id="wizard-form" class="needs-validation" novalidate>
+                <!-- Form Body containing Steps -->
+                <div class="card-body p-4 p-md-5">
+
+                    <!-- STEP 1: Course Selection -->
+                    <div class="wizard-step" id="step-1">
+                        <div class="text-center mb-4">
+                            <i class="bi bi-mortarboard-fill display-3 text-warning"></i>
+                            <h4 class="fw-bold mt-2">Select Your Program</h4>
+                            <p class="text-muted small">Choose the undergraduate or postgraduate course you belong to.</p>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" name="course" id="course-btech" value="B.Tech" checked required onclick="updateBranches(); autoUpdateCompletionYear();">
+                                <label class="btn btn-outline-primary w-100 py-3 rounded-3" for="course-btech">
+                                    <i class="bi bi-cpu fs-3 d-block mb-1"></i> B.Tech
+                                </label>
+                            </div>
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" name="course" id="course-bpharm" value="B.Pharmacy" required onclick="updateBranches(); autoUpdateCompletionYear();">
+                                <label class="btn btn-outline-primary w-100 py-3 rounded-3" for="course-bpharm">
+                                    <i class="bi bi-capsule fs-3 d-block mb-1"></i> B.Pharmacy
+                                </label>
+                            </div>
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" name="course" id="course-mtech" value="M.Tech" required onclick="updateBranches(); autoUpdateCompletionYear();">
+                                <label class="btn btn-outline-primary w-100 py-3 rounded-3" for="course-mtech">
+                                    <i class="bi bi-gear-wide-connected fs-3 d-block mb-1"></i> M.Tech
+                                </label>
+                            </div>
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" name="course" id="course-mpharm" value="M.Pharmacy" required onclick="updateBranches(); autoUpdateCompletionYear();">
+                                <label class="btn btn-outline-primary w-100 py-3 rounded-3" for="course-mpharm">
+                                    <i class="bi bi-prescription2 fs-3 d-block mb-1"></i> M.Pharmacy
+                                </label>
+                            </div>
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" name="course" id="course-mca" value="MCA" required onclick="updateBranches(); autoUpdateCompletionYear();">
+                                <label class="btn btn-outline-primary w-100 py-3 rounded-3" for="course-mca">
+                                    <i class="bi bi-code-slash fs-3 d-block mb-1"></i> MCA
+                                </label>
+                            </div>
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" name="course" id="course-mba" value="MBA" required onclick="updateBranches(); autoUpdateCompletionYear();">
+                                <label class="btn btn-outline-primary w-100 py-3 rounded-3" for="course-mba">
+                                    <i class="bi bi-briefcase fs-3 d-block mb-1"></i> MBA
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 2: Branch & Group Selection -->
+                    <div class="wizard-step d-none" id="step-2">
+                        <div class="text-center mb-4">
+                            <i class="bi bi-diagram-3-fill display-3 text-primary"></i>
+                            <h4 class="fw-bold mt-2">Select Group / Branch</h4>
+                            <p class="text-muted small">Select your branch specialization or department group.</p>
+                        </div>
+                        <div class="mb-3">
+                            <label for="branch" class="form-label fw-semibold text-secondary">Department / Branch</label>
+                            <select class="form-select form-select-lg rounded-3" id="branch" name="branch" required>
+                                <!-- Populated dynamically by JavaScript -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- STEP 3: Regulation & Join/Completion Year -->
+                    <div class="wizard-step d-none" id="step-3">
+                        <div class="text-center mb-4">
+                            <i class="bi bi-sliders display-3 text-success"></i>
+                            <h4 class="fw-bold mt-2">Regulation & Academic Span</h4>
+                            <p class="text-muted small">Choose regulation and years when you joined and completed the program.</p>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="regulation" class="form-label fw-semibold text-secondary">Regulation</label>
+                                <select class="form-select form-select-lg rounded-3" id="regulation" name="regulation" required>
+                                    <option value="R23">R23 Regulation</option>
+                                    <option value="R21">R21 Regulation</option>
+                                    <option value="R20" selected>R20 Regulation</option>
+                                    <option value="R19">R19 Regulation</option>
+                                    <option value="R15">R15 Regulation</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="joinYear" class="form-label fw-semibold text-secondary">Joining Year</label>
+                                <select class="form-select form-select-lg rounded-3" id="joinYear" name="joinYear" required onchange="autoUpdateCompletionYear()">
+                                    @for (int y = 2026; y >= 2015; y--)
+                                    {
+                                        if (y == 2020)
+                                        {
+                                            <option value="@y" selected>@y</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@y">@y</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="completionYear" class="form-label fw-semibold text-secondary">Completion Year</label>
+                                <select class="form-select form-select-lg rounded-3" id="completionYear" name="completionYear" required>
+                                    @for (int y = 2030; y >= 2015; y--)
+                                    {
+                                        if (y == 2024)
+                                        {
+                                            <option value="@y" selected>@y</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@y">@y</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 4: Target Selection -->
+                    <div class="wizard-step d-none" id="step-4">
+                        <div class="text-center mb-4">
+                            <i class="bi bi-search display-3 text-info"></i>
+                            <h4 class="fw-bold mt-2">Select Target Results</h4>
+                            <p class="text-muted small">Choose which year to load and search result sheets.</p>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label for="targetYear" class="form-label fw-semibold text-secondary">Academic Year</label>
+                                <select class="form-select rounded-3" id="targetYear" name="targetYear" required>
+                                    <option value="All" selected>All Years (Consolidated)</option>
+                                    <option value="1">1st Year Results</option>
+                                    <option value="2">2nd Year Results</option>
+                                    <option value="3">3rd Year Results</option>
+                                    <option value="4">4th Year Results</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="examType" class="form-label fw-semibold text-secondary">Exam Type</label>
+                                <select class="form-select rounded-3" id="examType" name="examType" required>
+                                    <option value="Both" selected>Both Regular & Supplementary</option>
+                                    <option value="Regular">Regular Only</option>
+                                    <option value="Supplementary">Supplementary Only</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="showStatus" class="form-label fw-semibold text-secondary">Display Status Filter</label>
+                                <select class="form-select rounded-3" id="showStatus" name="showStatus" required>
+                                    <option value="Both" selected>Both Passed & Failed</option>
+                                    <option value="Passed">Passed Results Only</option>
+                                    <option value="Failed">Failed Results Only</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 5: Roll Number & Submit -->
+                    <div class="wizard-step d-none" id="step-5">
+                        <div class="text-center mb-4">
+                            <i class="bi bi-shield-check display-3 text-danger"></i>
+                            <h4 class="fw-bold mt-2">Enter Hall Ticket Number</h4>
+                            <p class="text-muted small">Solve captchas on the next screen to start aggregating your scores.</p>
+                        </div>
+                        <div class="mb-3">
+                            <label for="hallTicketNumber" class="form-label fw-semibold text-secondary">Hall Ticket Number</label>
+                            <input type="text" class="form-control form-control-lg text-uppercase fs-4 text-center rounded-3 fw-bold" 
+                                   id="hallTicketNumber" name="hallTicketNumber" placeholder="e.g. 20001A0501" 
+                                   required maxlength="10" minlength="10" autocomplete="off" />
+                            <div class="invalid-feedback text-center">Hall Ticket must be exactly 10 characters.</div>
+                        </div>
+
+                        <!-- Selections summary -->
+                        <div class="p-3 bg-light rounded-3 small text-secondary">
+                            <div class="row">
+                                <div class="col-6 mb-1"><strong>Program:</strong> <span id="summary-program">-</span></div>
+                                <div class="col-6 mb-1"><strong>Branch:</strong> <span id="summary-branch">-</span></div>
+                                <div class="col-6"><strong>Reg / Years:</strong> <span id="summary-reg">-</span></div>
+                                <div class="col-6"><strong>Targets:</strong> <span id="summary-targets">-</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Footer Buttons -->
+                <div class="card-footer bg-light p-4 d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4 py-2 d-none" id="prev-btn" onclick="navigateStep(-1)">
+                        <i class="bi bi-chevron-left me-1"></i> Back
+                    </button>
+                    <button type="button" class="btn btn-primary rounded-pill px-4 py-2 ms-auto" id="next-btn" onclick="navigateStep(1)">
+                        Next <i class="bi bi-chevron-right ms-1"></i>
+                    </button>
+                    <button type="submit" class="btn btn-success rounded-pill px-4 py-2 ms-auto d-none" id="submit-btn">
+                        Start Finding Results <i class="bi bi-arrow-right-short ms-1"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let currentStep = 1;
+        const totalSteps = 5;
+
+        // Branch options mapping
+        const branchOptions = {
+            "B.Tech": [
+                { value: "Computer Science & Engineering", text: "Computer Science & Engineering (CSE)" },
+                { value: "Electronics & Communication Engineering", text: "Electronics & Communication Engineering (ECE)" },
+                { value: "Electrical & Electronics Engineering", text: "Electrical & Electronics Engineering (EEE)" },
+                { value: "Mechanical Engineering", text: "Mechanical Engineering (ME)" },
+                { value: "Civil Engineering", text: "Civil Engineering (CE)" },
+                { value: "Information Technology", text: "Information Technology (IT)" },
+                { value: "Computer Science & Systems Engineering", text: "Computer Science & Systems Engineering (CSSE)" }
+            ],
+            "B.Pharmacy": [
+                { value: "Pharmacy", text: "Bachelor of Pharmacy (B.Pharm)" }
+            ],
+            "M.Tech": [
+                { value: "Computer Science & Engineering", text: "Computer Science & Engineering" },
+                { value: "VLSI System Design", text: "VLSI System Design" },
+                { value: "Power Systems", text: "Power Electronics & Power Systems" },
+                { value: "Machine Design", text: "Machine Design" }
+            ],
+            "M.Pharmacy": [
+                { value: "Pharmaceutics", text: "Pharmaceutics" },
+                { value: "Pharmacology", text: "Pharmacology" },
+                { value: "Pharmaceutical Analysis", text: "Pharmaceutical Analysis" }
+            ],
+            "MCA": [
+                { value: "Computer Applications", text: "Master of Computer Applications (MCA)" }
+            ],
+            "MBA": [
+                { value: "Business Administration", text: "Master of Business Administration (MBA)" }
+            ]
+        };
+
+        function updateBranches() {
+            const course = document.querySelector('input[name="course"]:checked').value;
+            const branchSelect = document.getElementById('branch');
+            branchSelect.innerHTML = '';
+            
+            const options = branchOptions[course] || [];
+            options.forEach(opt => {
+                const el = document.createElement('option');
+                el.value = opt.value;
+                el.innerText = opt.text;
+                branchSelect.appendChild(el);
+            });
+        }
+
+        function autoUpdateCompletionYear() {
+            const course = document.querySelector('input[name="course"]:checked').value;
+            const joinYear = parseInt(document.getElementById('joinYear').value);
+            const compSelect = document.getElementById('completionYear');
+            
+            // Undergraduation (B.Tech/B.Pharmacy) is 4 years. PG (M.Tech/MCA/MBA) is 2 years.
+            const duration = (course === "B.Tech" || course === "B.Pharmacy") ? 4 : 2;
+            compSelect.value = joinYear + duration;
+        }
+
+        // Initialize values
+        updateBranches();
+        autoUpdateCompletionYear();
+
+        function navigateStep(direction) {
+            // Validate current step fields before proceeding
+            const currentStepEl = document.getElementById(`step-${currentStep}`);
+            const inputs = currentStepEl.querySelectorAll('input, select');
+            let isValid = true;
+            inputs.forEach(input => {
+                if (!input.checkValidity()) {
+                    isValid = false;
+                    input.classList.add('is-invalid');
+                } else {
+                    input.classList.remove('is-invalid');
+                }
+            });
+
+            if (direction === 1 && !isValid) return;
+
+            // Hide current step
+            document.getElementById(`step-${currentStep}`).classList.add('d-none');
+            
+            // Update index
+            currentStep += direction;
+            
+            // Show new step
+            document.getElementById(`step-${currentStep}`).classList.remove('d-none');
+
+            // Update Progress Bar
+            const percent = (currentStep / totalSteps) * 100;
+            const progress = document.getElementById('wizard-progress');
+            progress.style.width = `${percent}%`;
+            progress.setAttribute('aria-valuenow', percent);
+            
+            // Update labels
+            const indicator = document.getElementById('step-indicator');
+            const stepTitles = [
+                "Select Program", 
+                "Select Branch Specialization", 
+                "Regulation & Join Year", 
+                "Select Target Results", 
+                "Enter Hall Ticket"
+            ];
+            indicator.innerText = `Step ${currentStep} of ${totalSteps}: ${stepTitles[currentStep-1]}`;
+            document.getElementById('step-badge').innerText = `${percent}% Complete`;
+
+            // Manage buttons
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const submitBtn = document.getElementById('submit-btn');
+
+            if (currentStep === 1) prevBtn.classList.add('d-none');
+            else prevBtn.classList.remove('d-none');
+
+            if (currentStep === totalSteps) {
+                nextBtn.classList.add('d-none');
+                submitBtn.classList.remove('d-none');
+                updateSummary();
+            } else {
+                nextBtn.classList.remove('d-none');
+                submitBtn.classList.add('d-none');
+            }
+        }
+
+        function updateSummary() {
+            const course = document.querySelector('input[name="course"]:checked').value;
+            const branch = document.getElementById('branch').value;
+            const regulation = document.getElementById('regulation').value;
+            const joinYear = document.getElementById('joinYear').value;
+            const completionYear = document.getElementById('completionYear').value;
+            const targetYear = document.getElementById('targetYear').value;
+            const examType = document.getElementById('examType').value;
+            const showStatus = document.getElementById('showStatus').value;
+
+            document.getElementById('summary-program').innerText = course;
+            document.getElementById('summary-branch').innerText = branch;
+            document.getElementById('summary-reg').innerText = `${regulation} (${joinYear} - ${completionYear})`;
+            
+            let targetText = targetYear === "All" ? "All Years" : `${targetYear} Year`;
+            targetText += ` (${examType}) - Display: ${showStatus}`;
+            document.getElementById('summary-targets').innerText = targetText;
+        }
+
+        // Bootstrap form validation
+        (() => {
+            'use strict'
+            const form = document.getElementById('wizard-form');
+            form.addEventListener('submit', event => {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        })()
+    </script>
+}
