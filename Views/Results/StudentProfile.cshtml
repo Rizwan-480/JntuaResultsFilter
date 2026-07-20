@@ -126,23 +126,42 @@
         </div>
     </div>
 
-    <!-- Adsterra Native Banner Ad -->
-    <div class="my-4 text-center no-print">
-        <script async="async" data-cfasync="false" src="https://discussionanymore.com/2872882c84b5aebcd12a6750d8c46285/invoke.js"></script>
-        <div id="container-2872882c84b5aebcd12a6750d8c46285"></div>
-    </div>
-
-    <!-- AUTO SCANNER WIZARD (If Unfetched exams exist) -->
-    @if (unfetchedExams.Count > 0)
-    {
-        <div class="card shadow-sm border-0 rounded-4 mb-4 overflow-hidden border-start border-danger border-4 no-print">
-            <div class="card-body p-4">
+    <!-- AUTO SCANNER WIZARD (Always visible with different states) -->
+    @{
+        var apiConnectionFailed = (bool)(ViewBag.ApiConnectionFailed ?? false);
+        var totalMatchingSheets = (int)(ViewBag.TotalMatchingSheets ?? 0);
+    }
+    <div class="card shadow-sm border-0 rounded-4 mb-4 overflow-hidden border-start border-4 no-print @(apiConnectionFailed ? "border-warning" : unfetchedExams.Count > 0 ? "border-danger" : "border-success")">
+        <div class="card-body p-4">
+            @if (apiConnectionFailed)
+            {
+                <!-- API Connection Failed State -->
+                <div class="row align-items-center">
+                    <div class="col-md">
+                        <h5 class="fw-bold text-warning mb-1"><i class="bi bi-exclamation-triangle-fill me-2"></i> JNTUA Server Unavailable</h5>
+                        <p class="text-secondary mb-0 small">
+                            Could not connect to JNTUA's result server to fetch available exam sheets. 
+                            This may happen if the university server is temporarily down or your network blocks the connection.
+                            <strong>Your previously scraped results are still displayed below.</strong>
+                        </p>
+                    </div>
+                    <div class="col-md-auto mt-3 mt-md-0">
+                        <a href="@Url.Action("StudentProfile", new { hallTicket = student.HallTicket, targetYear = ViewBag.TargetYearFilter, examType = ViewBag.ExamTypeFilter, joinYear = ViewBag.JoinYearFilter, completionYear = ViewBag.CompletionYearFilter, showStatus = ViewBag.ShowStatus })" 
+                           class="btn btn-warning btn-lg rounded-pill px-4">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Retry Connection
+                        </a>
+                    </div>
+                </div>
+            }
+            else if (unfetchedExams.Count > 0)
+            {
+                <!-- Pending Exam Sheets State -->
                 <div class="row align-items-center">
                     <div class="col-md">
                         <h5 class="fw-bold text-danger mb-1"><i class="bi bi-robot me-2"></i> Automated Scorecard Crawler</h5>
                         <p class="text-secondary mb-0 small">
                             We found <strong>@unfetchedExams.Count</strong> result sheets matching your target configuration (Year: @ViewBag.TargetYearFilter, Type: @ViewBag.ExamTypeFilter). 
-                            You can automatically scan and query all of them one-by-one by solving a captcha for each link.
+                            Click the button to automatically scan and query all of them one-by-one by solving a captcha for each link.
                         </p>
                     </div>
                     <div class="col-md-auto mt-3 mt-md-0">
@@ -167,9 +186,28 @@
                         </ul>
                     </div>
                 </div>
-            </div>
+            }
+            else
+            {
+                <!-- All Caught Up State -->
+                <div class="row align-items-center">
+                    <div class="col-md">
+                        <h5 class="fw-bold text-success mb-1"><i class="bi bi-check-circle-fill me-2"></i> All Result Sheets Scraped</h5>
+                        <p class="text-secondary mb-0 small">
+                            All <strong>@totalMatchingSheets</strong> matching result sheets have been downloaded and saved. 
+                            Your consolidated scorecard below is up to date. When JNTUA uploads new results, they will automatically appear here.
+                        </p>
+                    </div>
+                    <div class="col-md-auto mt-3 mt-md-0">
+                        <a href="@Url.Action("StudentProfile", new { hallTicket = student.HallTicket, targetYear = ViewBag.TargetYearFilter, examType = ViewBag.ExamTypeFilter, joinYear = ViewBag.JoinYearFilter, completionYear = ViewBag.CompletionYearFilter, showStatus = ViewBag.ShowStatus })" 
+                           class="btn btn-outline-success btn-lg rounded-pill px-4">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Check for New Results
+                        </a>
+                    </div>
+                </div>
+            }
         </div>
-    }
+    </div>
 
     <!-- Main Results Details Card -->
     <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
@@ -431,6 +469,12 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- Adsterra Native Banner Ad -->
+<div class="my-4 text-center no-print">
+    <script async="async" data-cfasync="false" src="https://discussionanymore.com/2872882c84b5aebcd12a6750d8c46285/invoke.js"></script>
+    <div id="container-2872882c84b5aebcd12a6750d8c46285"></div>
 </div>
 
 <!-- hCaptcha Verification Modal -->

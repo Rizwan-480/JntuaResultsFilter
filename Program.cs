@@ -6,7 +6,7 @@ builder.Services.AddSingleton<JntuaResultsFilter.Database.DatabaseHelper>();
 builder.Services.AddHttpClient<JntuaResultsFilter.Services.JntuaApiService>()
     .ConfigurePrimaryHttpMessageHandler(() => new System.Net.Http.HttpClientHandler
     {
-        ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true
+        ServerCertificateCustomValidationCallback = (message, cert, chain, sslPolicyErrors) => true
     });
 
 var app = builder.Build();

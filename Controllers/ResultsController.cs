@@ -101,6 +101,20 @@ namespace JntuaResultsFilter.Controllers
             });
         }
 
+        /// <summary>
+        /// Maps user-facing course names to the search strings used by JNTUA's API.
+        /// JNTUA titles use abbreviated forms like "B.Pharm" and "M.Pharm".
+        /// </summary>
+        private string GetApiSearchString(string course)
+        {
+            return course switch
+            {
+                "B.Pharmacy" => "B.Pharm",
+                "M.Pharmacy" => "M.Pharm",
+                _ => course  // B.Tech, M.Tech, MCA, MBA already match
+            };
+        }
+
         // GET: /Results/StudentProfile
         public async Task<IActionResult> StudentProfile(string hallTicket, string targetYear = "All", string examType = "Both", int joinYear = 2020, int completionYear = 2024, string showStatus = "Both")
         {
@@ -123,12 +137,22 @@ namespace JntuaResultsFilter.Controllers
 
             // Fetch available result sets from JNTUA results API matching the student's Course & Regulation
             var matchingExamSheets = new List<ResultSet>();
+            bool apiConnectionFailed = false;
             
-            // Fetch multiple pages to prevent older exams (e.g. from joining year) from being cut off
-            for (int page = 1; page <= 4; page++)
+            // Use the correct API search string for the student's course
+            var apiSearchTerm = GetApiSearchString(student.Course);
+
+            // Fetch multiple pages to ensure all past, current, and newly uploaded exams are retrieved
+            for (int page = 1; page <= 8; page++)
             {
-                var apiResponse = await _apiService.GetResultSetsAsync(student.Course, page, 250);
-                if (apiResponse?.Data?.Responses == null || apiResponse.Data.Responses.Count == 0)
+                var apiResponse = await _apiService.GetResultSetsAsync(apiSearchTerm, page, 250);
+                if (apiResponse == null)
+                {
+                    // API connection failed (timeout, network error, etc.)
+                    apiConnectionFailed = true;
+                    break;
+                }
+                if (apiResponse.Data?.Responses == null || apiResponse.Data.Responses.Count == 0)
                 {
                     break;
                 }
@@ -142,27 +166,20 @@ namespace JntuaResultsFilter.Controllers
                     var parsedExam = ParseExamTitle(dto.Title);
                     if (parsedExam != null)
                     {
-                        parsedExam.Id = dto.EffectiveId;
-                        if (DateTime.TryParse(dto.PublishDate, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var pubDate) ||
-                            DateTime.TryParse(dto.PublishDate, out pubDate))
+                        parsedExam.Id = !string.IsNullOrEmpty(dto.ResultTitleId) ? dto.ResultTitleId : dto.Id;
+                        if (DateTime.TryParse(dto.PublishDate, out var pubDate))
                         {
                             parsedExam.PublishDate = pubDate;
                         }
 
                         // Apply Wizard Filters:
-                        bool courseMatch = parsedExam.Course.Equals(student.Course, StringComparison.OrdinalIgnoreCase) ||
-                                           dto.Title.Contains(student.Course, StringComparison.OrdinalIgnoreCase);
+                        // 1. Course match (e.g. B.Tech)
+                        // 2. Regulation match (e.g. R20)
+                        // 3. Target Year match (1st, 2nd, 3rd, 4th, or All)
+                        // 4. Exam Type match (Regular, Supplementary, or Both)
                         
-                        bool regMatch = string.IsNullOrEmpty(studentReg) ||
-                                         parsedExam.Regulation.Equals(studentReg, StringComparison.OrdinalIgnoreCase) ||
-                                         dto.Title.Contains($"({studentReg})", StringComparison.OrdinalIgnoreCase) ||
-                                         dto.Title.Contains($" {studentReg}", StringComparison.OrdinalIgnoreCase);
-                        
-                        bool joinYearMatch = true;
-                        if (parsedExam.PublishDate.HasValue)
-                        {
-                            joinYearMatch = parsedExam.PublishDate.Value.Year >= joinYear && parsedExam.PublishDate.Value.Year <= completionYear;
-                        }
+                        bool courseMatch = parsedExam.Course.Equals(student.Course, StringComparison.OrdinalIgnoreCase);
+                        bool regMatch = parsedExam.Regulation.Equals(studentReg, StringComparison.OrdinalIgnoreCase);
 
                         bool targetYearMatch = true;
                         if (targetYear != "All")
@@ -189,7 +206,7 @@ namespace JntuaResultsFilter.Controllers
                                             parsedExam.Title.Contains("Suppl", StringComparison.OrdinalIgnoreCase);
                         }
 
-                        if (courseMatch && regMatch && joinYearMatch && targetYearMatch && examTypeMatch && !string.IsNullOrWhiteSpace(parsedExam.Id))
+                        if (courseMatch && regMatch && targetYearMatch && examTypeMatch)
                         {
                             matchingExamSheets.Add(parsedExam);
                         }
@@ -213,6 +230,8 @@ namespace JntuaResultsFilter.Controllers
             ViewBag.JoinYearFilter = joinYear;
             ViewBag.CompletionYearFilter = completionYear;
             ViewBag.ShowStatus = showStatus;
+            ViewBag.ApiConnectionFailed = apiConnectionFailed;
+            ViewBag.TotalMatchingSheets = matchingExamSheets.Count;
 
             // Compute GPA statistics
             ViewBag.CGPA = CalculateCGPA(dbResults);
@@ -241,12 +260,21 @@ namespace JntuaResultsFilter.Controllers
             }
 
             var meta = metaResponse.Data;
+            // Use the student's actual course as fallback instead of hardcoded B.Tech
+            var studentForFallback = _dbHelper.GetStudent(hallTicketNumber);
+            var fallbackCourse = studentForFallback?.Course ?? "B.Tech";
+            var fallbackReg = "R20";
+            if (studentForFallback != null)
+            {
+                var regFallback = Regex.Match(studentForFallback.Branch, @"\((R\d+)\)");
+                if (regFallback.Success) fallbackReg = regFallback.Groups[1].Value;
+            }
             var parsedExam = ParseExamTitle(meta.Title) ?? new ResultSet
             {
                 Id = resultTitleId,
                 Title = meta.Title,
-                Course = "B.Tech",
-                Regulation = "R20",
+                Course = fallbackCourse,
+                Regulation = fallbackReg,
                 Year = 1,
                 Semester = 1,
                 ExamType = "Regular"
