@@ -4,26 +4,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 builder.Services.AddSingleton<JntuaResultsFilter.Database.DatabaseHelper>();
 builder.Services.AddHttpClient<JntuaResultsFilter.Services.JntuaApiService>()
-    .ConfigurePrimaryHttpMessageHandler(() => new System.Net.Http.SocketsHttpHandler
+    .ConfigurePrimaryHttpMessageHandler(() => new System.Net.Http.HttpClientHandler
     {
-        ConnectCallback = async (context, cancellationToken) =>
-        {
-            var host = context.DnsEndPoint.Host;
-            var port = context.DnsEndPoint.Port;
-            if (host.Equals("jntuaresults.ac.in", StringComparison.OrdinalIgnoreCase))
-            {
-                var socket = new System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.InterNetwork, System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
-                await socket.ConnectAsync("143.244.131.73", port, cancellationToken);
-                return new System.Net.Sockets.NetworkStream(socket, ownsSocket: true);
-            }
-            else
-            {
-                var addresses = await System.Net.Dns.GetHostAddressesAsync(host, cancellationToken);
-                var socket = new System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.InterNetwork, System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
-                await socket.ConnectAsync(addresses, port, cancellationToken);
-                return new System.Net.Sockets.NetworkStream(socket, ownsSocket: true);
-            }
-        }
+        ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true
     });
 
 var app = builder.Build();

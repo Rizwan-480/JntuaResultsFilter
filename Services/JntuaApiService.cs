@@ -14,7 +14,7 @@ namespace JntuaResultsFilter.Services
     {
         private readonly HttpClient _httpClient;
         private readonly ILogger<JntuaApiService> _logger;
-        private const string BaseUrl = "https://jntuaresults.ac.in/app/api/v1";
+        private const string BaseUrl = "http://jntuaresults.ac.in/app/api/v1";
 
         public JntuaApiService(HttpClient httpClient, ILogger<JntuaApiService> logger)
         {
@@ -24,7 +24,7 @@ namespace JntuaResultsFilter.Services
             // Set headers to mimic a normal browser request
             _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
             _httpClient.DefaultRequestHeaders.Accept.ParseAdd("application/json, text/plain, */*");
-            _httpClient.DefaultRequestHeaders.Referrer = new Uri("https://jntuaresults.ac.in/");
+            _httpClient.DefaultRequestHeaders.Referrer = new Uri("http://jntuaresults.ac.in/");
         }
 
         // 1. Fetch result sets matching a search query
@@ -208,9 +208,19 @@ namespace JntuaResultsFilter.Services
 
     public class JntuaResultSetDto
     {
+        [JsonPropertyName("id")]
         public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("resultTitleId")]
+        public string ResultTitleId { get; set; } = string.Empty;
+
+        [JsonPropertyName("title")]
         public string Title { get; set; } = string.Empty;
+
+        [JsonPropertyName("publishDate")]
         public string PublishDate { get; set; } = string.Empty;
+
+        public string EffectiveId => !string.IsNullOrWhiteSpace(ResultTitleId) ? ResultTitleId : Id;
     }
 
     public class JntuaResultSetDetailResponse

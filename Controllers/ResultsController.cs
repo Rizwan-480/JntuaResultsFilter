@@ -142,21 +142,21 @@ namespace JntuaResultsFilter.Controllers
                     var parsedExam = ParseExamTitle(dto.Title);
                     if (parsedExam != null)
                     {
-                        parsedExam.Id = dto.Id;
-                        if (DateTime.TryParse(dto.PublishDate, out var pubDate))
+                        parsedExam.Id = dto.EffectiveId;
+                        if (DateTime.TryParse(dto.PublishDate, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var pubDate) ||
+                            DateTime.TryParse(dto.PublishDate, out pubDate))
                         {
                             parsedExam.PublishDate = pubDate;
                         }
 
                         // Apply Wizard Filters:
-                        // 1. Course match (e.g. B.Tech)
-                        // 2. Regulation match (e.g. R20)
-                        // 3. Joining Year match (PublishDate.Year must be >= joining year and <= completion year)
-                        // 4. Target Year match (1st, 2nd, 3rd, 4th, or All)
-                        // 5. Exam Type match (Regular, Supplementary, or Both)
+                        bool courseMatch = parsedExam.Course.Equals(student.Course, StringComparison.OrdinalIgnoreCase) ||
+                                           dto.Title.Contains(student.Course, StringComparison.OrdinalIgnoreCase);
                         
-                        bool courseMatch = parsedExam.Course.Equals(student.Course, StringComparison.OrdinalIgnoreCase);
-                        bool regMatch = parsedExam.Regulation.Equals(studentReg, StringComparison.OrdinalIgnoreCase);
+                        bool regMatch = string.IsNullOrEmpty(studentReg) ||
+                                         parsedExam.Regulation.Equals(studentReg, StringComparison.OrdinalIgnoreCase) ||
+                                         dto.Title.Contains($"({studentReg})", StringComparison.OrdinalIgnoreCase) ||
+                                         dto.Title.Contains($" {studentReg}", StringComparison.OrdinalIgnoreCase);
                         
                         bool joinYearMatch = true;
                         if (parsedExam.PublishDate.HasValue)
@@ -181,17 +181,15 @@ namespace JntuaResultsFilter.Controllers
                         bool examTypeMatch = true;
                         if (examType == "Regular")
                         {
-                            // Title contains "Regular" (can be composite "Regular & Supplementary")
                             examTypeMatch = parsedExam.Title.Contains("Regular", StringComparison.OrdinalIgnoreCase);
                         }
                         else if (examType == "Supplementary")
                         {
-                            // Title contains "Supplementary" or "Suppl" (can be composite "Regular & Supplementary")
                             examTypeMatch = parsedExam.Title.Contains("Supplementary", StringComparison.OrdinalIgnoreCase) || 
                                             parsedExam.Title.Contains("Suppl", StringComparison.OrdinalIgnoreCase);
                         }
 
-                        if (courseMatch && regMatch && joinYearMatch && targetYearMatch && examTypeMatch)
+                        if (courseMatch && regMatch && joinYearMatch && targetYearMatch && examTypeMatch && !string.IsNullOrWhiteSpace(parsedExam.Id))
                         {
                             matchingExamSheets.Add(parsedExam);
                         }
